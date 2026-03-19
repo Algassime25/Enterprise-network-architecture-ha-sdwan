@@ -1,0 +1,116 @@
+hostname ASA1
+domain-name mylab.local
+enable password ***** pbkdf2
+service-module 0 keepalive-timeout 4
+service-module 0 keepalive-counter 6
+names
+no mac-address auto
+
+!
+interface GigabitEthernet0/0
+ nameif inside-diagonal
+ security-level 100
+ ip address 16.16.16.1 255.255.255.248 standby 16.16.16.3
+!
+interface GigabitEthernet0/1
+ description LAN/STATE Failover Interface
+!
+interface GigabitEthernet0/2
+ description Link to DMZ_SW Cluster
+ nameif outside
+ security-level 0
+ ip address 172.16.10.1 255.255.255.192 standby 172.16.10.2
+!
+interface GigabitEthernet0/3
+ shutdown
+ no nameif
+ no security-level
+ no ip address
+!
+interface GigabitEthernet0/4
+ nameif inside
+ security-level 100
+ ip address 12.12.12.1 255.255.255.248 standby 12.12.12.3
+!
+interface GigabitEthernet0/5
+ shutdown
+ no nameif
+ no security-level
+ no ip address
+!
+ftp mode passive
+dns server-group DefaultDNS
+ domain-name mylab.local
+same-security-traffic permit inter-interface
+same-security-traffic permit intra-interface
+no object-group-search access-control
+object network INTERNAL_NET
+ subnet 10.0.0.0 255.0.0.0
+object network DMZ_NET
+ subnet 172.16.10.0 255.255.255.192
+access-group OUTSIDE_IN in interface outside
+access-list OUTSIDE_IN extended permit ospf any any
+access-list OUTSIDE_IN extended permit icmp any any
+access-list OUTSIDE_IN extended permit ip any any
+access-list OSPF_ALLOW extended permit icmp 10.10.0.0 255.255.0.0 host 12.12.12.1
+access-list OSPF_ALLOW extended permit icmp 10.10.0.0 255.255.0.0 host 16.16.16.1
+access-list OSPF_ALLOW extended permit icmp 10.10.0.0 255.255.0.0 host 172.16.10.1
+pager lines 23
+mtu inside-diagonal 1500
+mtu outside 1500
+mtu inside 1500
+failover
+failover lan unit secondary
+failover lan interface FOCONN GigabitEthernet0/1
+failover link FOCONN GigabitEthernet0/1
+failover interface ip FOCONN 13.13.13.1 255.255.255.248 standby 13.13.13.2
+no failover wait-disable
+icmp unreachable rate-limit 1 burst-size 1
+icmp permit any inside-diagonal
+icmp permit 10.10.0.0 255.255.0.0 inside-diagonal
+icmp permit 10.10.50.0 255.255.255.0 inside-diagonal
+icmp permit any outside
+icmp permit 10.10.50.0 255.255.255.0 outside
+icmp permit 10.10.0.0 255.255.255.0 outside
+icmp permit any inside
+icmp permit 10.10.0.0 255.255.0.0 inside
+icmp permit 10.10.50.0 255.255.255.0 inside
+no asdm history enable
+arp timeout 14400
+no arp permit-nonconnected
+arp rate-limit 8192
+router ospf 1
+ router-id 10.10.10.10
+ network 12.12.12.0 255.255.255.248 area 0
+ network 13.13.13.0 255.255.255.248 area 0
+ network 16.16.16.0 255.255.255.248 area 0
+ network 172.16.10.0 255.255.255.192 area 0
+ log-adj-changes
+ redistribute connected subnets
+ redistribute eigrp 100 subnets
+!
+router eigrp 100
+!
+timeout xlate 3:00:00
+timeout pat-xlate 0:00:30
+timeout conn 1:00:00 half-closed 0:10:00 udp 0:02:00 sctp 0:02:00 icmp 0:00:02
+timeout sunrpc 0:10:00 h323 0:05:00 h225 1:00:00 mgcp 0:05:00 mgcp-pat 0:05:00
+timeout sip 0:30:00 sip_media 0:02:00 sip-invite 0:03:00 sip-disconnect 0:02:00
+timeout sip-provisional-media 0:02:00 uauth 0:05:00 absolute
+timeout tcp-proxy-reassembly 0:01:00
+timeout floating-conn 0:00:00
+timeout conn-holddown 0:00:15
+timeout igp stale-route 0:01:10
+aaa-server RAD1 protocol radius
+aaa-server RAD1 (inside) host 10.10.50.10
+ key *****
+ authentication-port 1812
+ accounting-port 1813
+user-identity default-domain LOCAL
+aaa authentication ssh console RAD1 LOCAL
+aaa authorization exec authentication-server
+aaa authentication login-history
+no snmp-server location
+no snmp-server contact
+
+        No Active mate detected
