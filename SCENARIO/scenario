@@ -1,0 +1,153 @@
+# Enterprise Multi-Layer Network Architecture
+
+## Project Objective | Objectif du projet (Personal Statement)
+
+**EN:**  
+In this project, I designed and implemented a complete enterprise-grade network from the Access layer to the Internet edge. The objective was to simulate a real-world corporate infrastructure including redundancy, dynamic routing, firewall high availability, dual ISP connectivity, and SD-WAN.  
+The goal was not only to ensure connectivity, but also to deeply understand how EIGRP, OSPF, and BGP interact, how route redistribution operates, and how high availability guarantees business continuity.  
+This lab represents a realistic Enterprise Edge architecture suitable for medium to large organizations.
+
+**FR :**  
+Dans ce projet, j’ai conçu et implémenté une infrastructure réseau d’entreprise complète, de la couche d’accès jusqu’à la bordure Internet. L’objectif était de simuler une architecture réelle incluant la redondance, le routage dynamique, la haute disponibilité des pare-feu, la connectivité multi-ISP et le SD-WAN.  
+Le but n’était pas seulement d’assurer la communication, mais aussi de comprendre en profondeur l’interaction entre EIGRP, OSPF et BGP, le fonctionnement de la redistribution de routes, et le rôle de la haute disponibilité dans la continuité des services.  
+Ce laboratoire représente une architecture Enterprise Edge réaliste adaptée aux organisations de taille moyenne à grande.
+
+---
+
+## Complete IP Addressing Plan | Plan d’adressage complet
+
+### Internal Networks | Réseaux internes
+- VLAN 10 (Users): 10.10.10.0/24  
+- VLAN 20 (Users): 10.10.20.0/24  
+- VLAN 30 (Users): 10.10.30.0/24  
+- VLAN 50 (Management): 10.10.50.0/24  
+- VLAN 60 (Servers): 25.25.25.0/29  
+
+### Core-Distribution Links
+- 2.2.2.0/30  
+- 4.4.4.0/29  
+- 5.5.5.0/29  
+
+### Core-ASA Links
+- 12.12.12.0/29  
+- 16.16.16.0/29  
+
+### ASA Failover
+- 13.13.13.0/29  
+
+### DMZ Network
+- 172.16.10.0/26  
+
+### WAN Links
+- 100.64.1.0/30 (FGT ↔ R1)  
+- 100.64.2.0/30 (FGT ↔ R2)  
+- 100.64.3.0/30 (R1 ↔ R2)  
+
+### ISP Networks
+- 198.51.100.0/30 (Verizon)  
+- 203.0.113.0/30 (AT&T)  
+
+---
+
+## Routing Architecture Overview | Architecture de routage
+
+### LAN Routing | Routage LAN
+
+**EN:**  
+EIGRP AS 100 is implemented between Distribution and Core switches to ensure fast convergence and scalability.
+
+**FR :**  
+EIGRP AS 100 est utilisé entre les switchs Distribution et Core afin d’assurer une convergence rapide et une bonne évolutivité.
+
+---
+
+### Core to Firewall | Core vers pare-feu
+
+**EN:**  
+OSPF Area 0 is used between the Core and ASA. The Core redistributes EIGRP into OSPF, and the ASA redistributes connected routes.
+
+**FR :**  
+OSPF Area 0 est utilisé entre le Core et l’ASA. Le Core redistribue EIGRP vers OSPF, et l’ASA redistribue ses routes connectées.
+
+---
+
+### Internet Edge | Bordure Internet
+
+**EN:**  
+FortiGate runs BGP AS 65010 and peers with transit routers (AS 65020).  
+Transit routers peer with ISPs Verizon (AS 64512) and AT&T (AS 64513), ensuring full dual-ISP redundancy.
+
+**FR :**  
+Le FortiGate utilise BGP AS 65010 et établit des voisinages avec les routeurs de transit (AS 65020).  
+Ces routeurs se connectent aux ISP Verizon (AS 64512) et AT&T (AS 64513), assurant une redondance complète.
+
+---
+
+## High Availability Design | Haute disponibilité
+
+### ASA High Availability
+
+**EN:**  
+Configured in Active/Standby mode with a dedicated failover link.
+
+**FR :**  
+Configuré en mode Actif/Passif avec un lien de failover dédié.
+
+- Interface: Gig0/1  
+- Network: 13.13.13.0/29  
+
+---
+
+### FortiGate High Availability
+
+**EN:**  
+Active/Passive cluster with session synchronization and heartbeat monitoring.
+
+**FR :**  
+Cluster Actif/Passif avec synchronisation des sessions et supervision via heartbeat.
+
+- Interface: port3  
+- Session pickup enabled  
+- Full configuration sync  
+
+---
+
+## SD-WAN & NAT Implementation | SD-WAN et NAT
+
+**EN:**  
+SD-WAN is configured with two WAN links (primary and secondary). Traffic uses WAN1 unless SLA conditions fail. NAT is applied for secure Internet access.
+
+**FR :**  
+Le SD-WAN est configuré avec deux liens WAN (principal et secondaire). Le trafic utilise WAN1 sauf en cas de défaillance SLA. Le NAT est activé pour l’accès Internet sécurisé.
+
+---
+
+## Configuration Summary by Layer | Résumé par couche
+
+### Access Layer
+- VLAN segmentation  
+- DHCP Snooping  
+- STP Rapid-PVST  
+
+### Distribution Layer
+- HSRP (gateway redundancy)  
+- Layer 3 EtherChannel  
+- EIGRP AS 100  
+
+### Core Layer
+- EIGRP ↔ OSPF redistribution  
+- Redundant links  
+
+### ASA
+- OSPF enabled  
+- Failover configured  
+- DMZ integration  
+
+### FortiGate
+- OSPF + BGP  
+- SD-WAN  
+- Dual ISP NAT  
+
+### Transit Routers
+- iBGP between R1/R2  
+- eBGP to ISPs  
